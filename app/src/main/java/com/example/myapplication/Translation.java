@@ -93,7 +93,7 @@ public class Translation extends AppCompatActivity {
                 openPhotoGallery();
             }
         });
-        image = (ImageView) findViewById(R.id.imageView2);
+        image = (ImageView) findViewById(R.id.imageView);
         translateButton = (Button) findViewById(R.id.translate);
         translateButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -186,10 +186,10 @@ public class Translation extends AppCompatActivity {
                             String path = getPathFromURI(selectedImageUri);
                             Log.i(TAG, "Image Path : " + path);
                             // Set the image in ImageView
-                            findViewById(R.id.imageView2).post(new Runnable() {
+                            findViewById(R.id.imageView).post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    ((ImageView) findViewById(R.id.imageView2)).setImageURI(selectedImageUri);
+                                    ((ImageView) findViewById(R.id.imageView)).setImageURI(selectedImageUri);
                                 }
                             });
 
