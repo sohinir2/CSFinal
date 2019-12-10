@@ -69,6 +69,9 @@ public class Translation extends AppCompatActivity {
     private String currentPhotoPath;
     private static final int REQUEST_TAKE_PHOTO = 1;
     private TextView translated;
+    private static final int CAMERA_REQUEST = 1888;
+    private ImageView imageView;
+    private static final int MY_CAMERA_PERMISSION_CODE = 100;
 
 
     @Override
@@ -76,13 +79,13 @@ public class Translation extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_translation);
 
-        camButton = (Button) findViewById(R.id.camera);
+        /*camButton = (Button) findViewById(R.id.camera);
         camButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 openCamera();
             }
-        });
+        });*/
         photoButton = (Button) findViewById(R.id.photogallery);
         photoButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -90,7 +93,7 @@ public class Translation extends AppCompatActivity {
                 openPhotoGallery();
             }
         });
-        image = (ImageView) findViewById(R.id.imageView);
+        image = (ImageView) findViewById(R.id.imageView2);
         translateButton = (Button) findViewById(R.id.translate);
         translateButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -114,30 +117,6 @@ public class Translation extends AppCompatActivity {
             this.translated.append(this.TranslatedText.toString());
         }
     }
-    static final int REQUEST_IMAGE_CAPTURE = 1;
-    public void openCamera() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-        }
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.fileprovider",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
-            }
-        }
-    }
 
     public void openPhotoGallery() {
         Intent intent = new Intent();
@@ -145,12 +124,48 @@ public class Translation extends AppCompatActivity {
         intent.setAction(Intent.ACTION_GET_CONTENT);
         startActivityForResult(Intent.createChooser(intent, "Select Picture"), SELECT_PICTURE);
     }
+
+    static final int REQUEST_IMAGE_CAPTURE = 1;
+    public void openCamera() {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            //if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                //startActivityForResult(takePictureIntent, CAMERA_REQUEST);
+            //}
+            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                // Create the File where the photo should go
+                File photoFile = null;
+                try {
+                    photoFile = createImageFile();
+                } catch (IOException ex) {
+                    // Error occurred while creating the File
+                }
+                // Continue only if the File was successfully created
+                if (photoFile != null) {
+                    Uri photoURI = FileProvider.getUriForFile(this,
+                            "com.example.android.fileprovider",
+                            photoFile);
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                    startActivityForResult(takePictureIntent, CAMERA_REQUEST);
+                }   else {
+                    startActivityForResult(takePictureIntent, CAMERA_REQUEST);
+                }
+                //startActivityForResult(takePictureIntent, CAMERA_REQUEST);
+            }
+            //onActivityResult(SELECT_PICTURE, RESULT_OK, takePictureIntent);
+        //takePictureIntent.setType("image/*");
+        //takePictureIntent.setAction(Intent.ACTION_GET_CONTENT);
+        //startActivityForResult(Intent.createChooser(takePictureIntent, "Select Picture"), SELECT_PICTURE);
+        }
+
+
     @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             imageBitmap = (Bitmap) extras.get("data");
+            Bitmap resized = Bitmap.createScaledBitmap(imageBitmap, 124, 124, true);
+            image.setImageBitmap(resized);
         }
         new Thread(new Runnable() {
             @Override
@@ -162,24 +177,23 @@ public class Translation extends AppCompatActivity {
                         if (null != selectedImageUri) {
                             // Get the path from the Uri
                             /**File file = new File(selectedImageUri.toString());
-                            try {
-                                FileInputStream fileInputStream = new FileInputStream(file);
-                                imageBitmap = BitmapFactory.decodeStream(fileInputStream);
-                            } catch(Exception e) {
-
-                            }
+                             try {
+                             FileInputStream fileInputStream = new FileInputStream(file);
+                             imageBitmap = BitmapFactory.decodeStream(fileInputStream);
+                             } catch(Exception e) {
+                             }
                              **/
                             String path = getPathFromURI(selectedImageUri);
                             Log.i(TAG, "Image Path : " + path);
-                                // Set the image in ImageView
-                                findViewById(R.id.imageView).post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        ((ImageView) findViewById(R.id.imageView)).setImageURI(selectedImageUri);
-                                    }
-                                });
+                            // Set the image in ImageView
+                            findViewById(R.id.imageView2).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ((ImageView) findViewById(R.id.imageView2)).setImageURI(selectedImageUri);
+                                }
+                            });
 
-                            }
+                        }
                     }
                 }
             }
