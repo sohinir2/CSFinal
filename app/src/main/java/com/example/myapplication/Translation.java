@@ -73,7 +73,7 @@ public class Translation extends AppCompatActivity {
     private ImageView imageView;
     private static final int MY_CAMERA_PERMISSION_CODE = 100;
 
-
+    //Code borrowed from: https://www.youtube.com/watch?v=ondCeqlAwEI
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -212,6 +212,7 @@ public class Translation extends AppCompatActivity {
                     SELECT_PICTURE);
         }
     }
+    // Code borrowed from: http://www.coderzheaven.com/2012/04/20/select-an-image-from-gallery-in-android-and-show-it-in-an-imageview/
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
@@ -289,6 +290,8 @@ public class Translation extends AppCompatActivity {
         currentPhotoPath = image.getAbsolutePath();
         return image;
     }
+    // Code borrowed from: https://firebase.google.com/docs/ml-kit/android/translate-text
+    // and https://firebase.google.com/docs/ml-kit/android/recognize-text
     private void prepareTranslationModel(){
         FirebaseTranslatorOptions options =
                 new FirebaseTranslatorOptions.Builder()
