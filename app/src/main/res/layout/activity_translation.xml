@@ -22,7 +22,7 @@
         android:id="@+id/photogallery"
         android:layout_width="140dp"
         android:layout_height="60dp"
-        android:layout_below="@id/textView"
+        android:layout_below="@id/translatedtext"
         android:layout_centerHorizontal="true"
         android:text="Photo Gallery"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -36,7 +36,7 @@
         android:id="@+id/camera"
         android:layout_width="140dp"
         android:layout_height="60dp"
-        android:layout_below="@id/textView"
+        android:layout_below="@id/translatedtext"
         android:layout_centerHorizontal="true"
         android:text="Camera"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -50,7 +50,7 @@
         android:id="@+id/translate"
         android:layout_width="140dp"
         android:layout_height="60dp"
-        android:layout_below="@id/textView"
+        android:layout_below="@id/translatedtext"
         android:layout_centerHorizontal="true"
         android:text="Translate"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -60,7 +60,7 @@
         app:layout_constraintVertical_bias="0.96" />
 
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/translatedtext"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"

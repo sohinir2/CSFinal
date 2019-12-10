@@ -15,6 +15,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -25,13 +27,36 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditions;
+import com.google.firebase.ml.naturallanguage.FirebaseNaturalLanguage;
+import com.google.firebase.ml.naturallanguage.languageid.FirebaseLanguageIdentification;
+import com.google.firebase.ml.naturallanguage.translate.FirebaseTranslateLanguage;
+import com.google.firebase.ml.naturallanguage.translate.FirebaseTranslator;
+import com.google.firebase.ml.naturallanguage.translate.FirebaseTranslatorOptions;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.text.FirebaseVisionText;
+import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 public class Translation extends AppCompatActivity {
+    private HashMap<String, String> TextLangMap = new HashMap<>();
+    private StringBuilder TranslatedText = new StringBuilder();
+    private FirebaseTranslator fr_en_Translator;
+    private boolean ModelDownloaded = false;
 
     private Button translateButton;
     private Button camButton;
@@ -43,6 +68,7 @@ public class Translation extends AppCompatActivity {
     private Bitmap imageBitmap;
     private String currentPhotoPath;
     private static final int REQUEST_TAKE_PHOTO = 1;
+    private TextView translated;
 
 
     @Override
@@ -72,9 +98,21 @@ public class Translation extends AppCompatActivity {
                 openTranslateProcess();
             }
         });
+        translated = findViewById(R.id.translatedtext);
     }
     public void openTranslateProcess() {
-
+        imageBitmap = ((BitmapDrawable)image.getDrawable()).getBitmap();
+        if (imageBitmap != null) {
+            this.translated.setText("");
+            runTextRecognition(imageBitmap);
+            Iterator hmIterator = this.TextLangMap.entrySet().iterator();
+            while (hmIterator.hasNext()) {
+                HashMap.Entry mapElement = (HashMap.Entry) hmIterator.next();
+                String keyText = ((String) mapElement.getKey());
+                String keyValue = ((String) mapElement.getValue());
+            }
+            this.translated.append(this.TranslatedText.toString());
+        }
     }
     static final int REQUEST_IMAGE_CAPTURE = 1;
     public void openCamera() {
@@ -113,7 +151,6 @@ public class Translation extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             imageBitmap = (Bitmap) extras.get("data");
-            image.setImageBitmap(imageBitmap);
         }
         new Thread(new Runnable() {
             @Override
@@ -124,17 +161,25 @@ public class Translation extends AppCompatActivity {
                         final Uri selectedImageUri = data.getData();
                         if (null != selectedImageUri) {
                             // Get the path from the Uri
+                            /**File file = new File(selectedImageUri.toString());
+                            try {
+                                FileInputStream fileInputStream = new FileInputStream(file);
+                                imageBitmap = BitmapFactory.decodeStream(fileInputStream);
+                            } catch(Exception e) {
+
+                            }
+                             **/
                             String path = getPathFromURI(selectedImageUri);
                             Log.i(TAG, "Image Path : " + path);
-                            // Set the image in ImageView
-                            findViewById(R.id.imageView).post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ((ImageView) findViewById(R.id.imageView)).setImageURI(selectedImageUri);
-                                }
-                            });
+                                // Set the image in ImageView
+                                findViewById(R.id.imageView).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ((ImageView) findViewById(R.id.imageView)).setImageURI(selectedImageUri);
+                                    }
+                                });
 
-                        }
+                            }
                     }
                 }
             }
@@ -229,5 +274,141 @@ public class Translation extends AppCompatActivity {
         // Save a file: path for use with ACTION_VIEW intents
         currentPhotoPath = image.getAbsolutePath();
         return image;
+    }
+    private void prepareTranslationModel(){
+        FirebaseTranslatorOptions options =
+                new FirebaseTranslatorOptions.Builder()
+                        .setSourceLanguage(FirebaseTranslateLanguage.FR)
+                        .setTargetLanguage(FirebaseTranslateLanguage.EN)
+                        .build();
+        this.fr_en_Translator =
+                FirebaseNaturalLanguage.getInstance().getTranslator(options);
+
+        FirebaseModelDownloadConditions conditions = new FirebaseModelDownloadConditions.Builder()
+                .requireWifi()
+                .build();
+        this.fr_en_Translator.downloadModelIfNeeded(conditions)
+                .addOnSuccessListener(
+                        new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void v) {
+                                // Model downloaded successfully. Okay to start translating.
+                                // (Set a flag, unhide the translation UI, etc.)
+                                setModelDownloaded();
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(Exception e) {
+                                // Model couldn’t be downloaded or other internal error.
+                                // ...
+                                String msg = "Translator model can't be downloaded";
+                            }
+                        });
+    }
+    private void setModelDownloaded(){
+        this.ModelDownloaded = true;
+    }
+
+    private void runTextRecognition(Bitmap bmp) {
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(bmp);
+        /*
+        FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance()
+                .getOnDeviceTextRecognizer();
+        */
+        FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance()
+                .getCloudTextRecognizer();
+
+        recognizer.processImage(image)
+                .addOnSuccessListener(
+                        new OnSuccessListener<FirebaseVisionText>() {
+                            @Override
+                            public void onSuccess(FirebaseVisionText texts) {
+                                processTextRecognitionResult(texts);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(Exception e) {
+                                String  msg = e.getMessage();
+                                // Task failed with an exception
+                                e.printStackTrace();
+                            }
+                        });
+    }
+    private void runLanguageDetection(final String text){
+        FirebaseLanguageIdentification languageIdentifier =
+                FirebaseNaturalLanguage.getInstance().getLanguageIdentification();
+        languageIdentifier.identifyLanguage(text)
+                .addOnSuccessListener(
+                        new OnSuccessListener<String>() {
+                            @Override
+                            public void onSuccess(String languageCode) {
+                                if (languageCode != "und") {
+                                    processLanguageCode(text, languageCode);
+                                }
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(Exception e) {
+                                // Model couldn’t be loaded or other internal error.
+                                // ...
+                                String msg = e.getMessage();
+                            }
+                        });
+    }
+    private void processTextRecognitionResult(FirebaseVisionText texts) {
+        List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
+        this.TextLangMap.clear();
+
+        if (blocks.size() == 0) {
+            String msg = "No text found";
+            return;
+        }
+
+        for (int i = 0; i < blocks.size(); i++) {
+            List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
+            for (int j = 0; j < lines.size(); j++) {
+                List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
+                for (int k = 0; k < elements.size(); k++) {
+                    this.TextLangMap.put(elements.get(k).getText(), "en");
+                    runLanguageDetection(elements.get(k).getText());
+                }
+            }
+        }
+    }
+    private void processLanguageCode(String key, String langCode){
+        //Add the language code corresponding to the text we just retrieved
+        this.TextLangMap.put(key, langCode);
+        this.TranslatedText.append(key + ":" + langCode);
+        //procesLanguageTranslation(key, langCode);
+    }
+    private void procesLanguageTranslation(final String text, final String langCode) {
+        this.prepareTranslationModel();
+        this.fr_en_Translator.translate(text)
+                .addOnSuccessListener(
+                        new OnSuccessListener<String>() {
+                            @Override
+                            public void onSuccess(String translatedText) {
+                                // Translation successful.
+                                processTranslatedText(text, langCode);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(Exception e) {
+                                // Error.
+                                // ...
+                                String msg = "Language translation failed";
+                            }
+                        });
+    }
+    private void processTranslatedText(String originalText, String translatedText){
+        this.TranslatedText.append(translatedText);
     }
 }
