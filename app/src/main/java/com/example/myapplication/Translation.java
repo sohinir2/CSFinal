@@ -1,77 +1,54 @@
 package com.example.myapplication;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-import android.widget.Button;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
+public class Translation extends AppCompatActivity {
 
-public class MainActivity extends AppCompatActivity {
-    private Button goButton;
-    private ImageView image;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        goButton = (Button) findViewById(R.id.go);
-        goButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                openTranslation();
-            }
-        });
-
-        image = (ImageView) findViewById(R.id.imageView);
-    }
-
-    public void openTranslation() {
-        Intent intent = new Intent(this, Translation.class);
-        startActivity(intent);
-    }
-}
-
-/*
-public class MainActivity extends AppCompatActivity {
+    private Button translateButton;
     private Button camButton;
     private Button photoButton;
     private ImageView image;
     private static final int SELECT_PICTURE = 100;
     private static final String TAG = "SelectImageActivity";
     private ContentValues values;
-    private Uri imageUri;
-    private String imageurl;
-    private Uri contentUri;
     private Bitmap imageBitmap;
-    private static final String APPLICATION_NAME = "MyApplication";
+    private String currentPhotoPath;
+    private static final int REQUEST_TAKE_PHOTO = 1;
 
-    */
-/**
-     * Grants URI permissions to all applications which can respond to given intent
-     *
-     * @param ctx
-     * @param intent
-     * @param uri
-     * @param permissionFlags
-     *//*
-
-    public static void grantUriPermission(Activity ctx, Intent intent, Uri uri, int permissionFlags) {
-        List<ResolveInfo> resolvedIntentActivities = ctx.getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-
-        for (ResolveInfo resolvedIntentInfo : resolvedIntentActivities) {
-            String packageName = resolvedIntentInfo.activityInfo.packageName;
-
-            ctx.grantUriPermission(packageName, uri, permissionFlags);
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_translation);
 
         camButton = (Button) findViewById(R.id.camera);
         camButton.setOnClickListener(new View.OnClickListener() {
@@ -88,21 +65,39 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         image = (ImageView) findViewById(R.id.imageView);
+        translateButton = (Button) findViewById(R.id.translate);
+        translateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openTranslateProcess();
+            }
+        });
+    }
+    public void openTranslateProcess() {
 
-        values = new ContentValues();
-        values.put(MediaStore.Images.Media.TITLE, "New Picture");
-        values.put(MediaStore.Images.Media.DESCRIPTION, "From your Camera");
-        imageUri = getContentResolver().insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-        startActivityForResult(intent, SELECT_PICTURE);
     }
     static final int REQUEST_IMAGE_CAPTURE = 1;
     public void openCamera() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        }
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "com.example.android.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
         }
     }
 
@@ -144,22 +139,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }).start();
-        switch (requestCode) {
-
-            case SELECT_PICTURE:
-                if (requestCode == SELECT_PICTURE)
-                    if (resultCode == Activity.RESULT_OK) {
-                        try {
-                            imageBitmap = MediaStore.Images.Media.getBitmap(
-                                    getContentResolver(), imageUri);
-                            image.setImageBitmap(imageBitmap);
-                            imageurl = getPathFromURI(imageUri);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-        }
     }
     private void handlePermission() {
 
@@ -219,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        openAppSettings(MainActivity.this);
+                        openAppSettings(Translation.this);
                     }
                 });
         alertDialog.show();
@@ -237,4 +216,18 @@ public class MainActivity extends AppCompatActivity {
         i.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
         context.startActivity(i);
     }
-*/
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+        // Save a file: path for use with ACTION_VIEW intents
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
+}
